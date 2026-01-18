@@ -1,640 +1,613 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Routine Tracker 2026 – Dave</title>
-
-<style>
-  :root {
-    --primary: #0066ff;
-    --success: #00c853;
-    --warning: #ffab00;
-    --danger: #d50000;
-    --bg: #f5f9ff;
-    --card: white;
-    --text: #1a1a2e;
-    --muted: #546e7a;
-    --shadow-sm: 0 2px 10px rgba(0,0,0,0.08);
-    --shadow-md: 0 8px 32px rgba(0,0,0,0.14);
-    --transition: all 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  * { box-sizing: border-box; margin:0; padding:0; }
-
-  body {
-    font-family: system-ui, -apple-system, BlinkMacOSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #f0f4ff 0%, #e3f2fd 100%);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 24px 16px;
-    line-height: 1.5;
-  }
-
-  h1 {
-    text-align: center;
-    color: var(--primary);
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    margin-bottom: 1.6em;
-  }
-
-  #summary {
-    background: var(--card);
-    border-radius: 16px;
-    padding: 24px;
-    margin: 0 auto 40px;
-    max-width: 1100px;
-    box-shadow: var(--shadow-md);
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 16px;
-    margin: 24px 0;
-  }
-
-  .stat-card {
-    background: rgba(0,102,255,0.04);
-    border: 1px solid rgba(0,102,255,0.12);
-    border-radius: 12px;
-    padding: 16px;
-    text-align: center;
-    transition: var(--transition);
-  }
-
-  .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-  }
-
-  .stat-number {
-    font-size: 2.8rem;
-    font-weight: 800;
-    color: var(--success);
-    line-height: 1;
-  }
-
-  #calendar {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 28px;
-  }
-
-  .month {
-    background: var(--card);
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: var(--shadow-md);
-  }
-
-  .month h3 {
-    text-align: center;
-    margin-bottom: 16px;
-    color: var(--primary);
-    font-weight: 700;
-  }
-
-  .weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    font-weight: 600;
-    color: var(--muted);
-    text-align: center;
-    margin-bottom: 8px;
-  }
-
-  .days-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
-  }
-
-  .day-cell {
-    aspect-ratio: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-    position: relative;
-    font-size: 1.05rem;
-  }
-
-  .day-cell:hover:not(.future) {
-    transform: scale(1.14);
-    box-shadow: 0 0 0 3px rgba(0,102,255,0.22);
-  }
-
-  .day-cell.today {
-    border: 3px solid var(--primary);
-    transform: scale(1.08);
-  }
-
-  .day-cell.complete    { background: var(--success); color: white; }
-  .day-cell.partial     { background: var(--warning); color: black; }
-  .day-cell.missed      { background: var(--danger);  color: white; }
-  .day-cell.future      { background: #f0f0f0; color: #aaa; cursor: default; }
-
-  .day-emoji {
-    position: absolute;
-    bottom: 4px;
-    right: 4px;
-    font-size: 1.2rem;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
-  }
-
-  /* Modal ──────────────────────────────────────────────── */
-  #modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.58);
-    backdrop-filter: blur(8px);
-    display: none;
-    place-items: center;
-    z-index: 2000;
-    opacity: 0;
-    transition: opacity 0.5s ease;
-  }
-
-  #modal.show { opacity: 1; }
-
-  #modal-content {
-    background: var(--card);
-    border-radius: 20px;
-    width: 92%;
-    max-width: 620px;
-    max-height: 90vh;
-    overflow-y: auto;
-    padding: 28px;
-    box-shadow: 0 24px 80px rgba(0,0,0,0.32);
-    transform: scale(0.84) translateY(60px);
-    opacity: 0;
-    transition: all 0.62s cubic-bezier(0.34,1.56,0.64,1);
-  }
-
-  #modal.show #modal-content {
-    transform: none;
-    opacity: 1;
-  }
-
-  .modal-title {
-    margin: 0 0 24px;
-    color: var(--primary);
-    font-size: 1.8rem;
-    font-weight: 700;
-  }
-
-  .section {
-    margin-bottom: 32px;
-  }
-
-  .section h3 {
-    margin: 0 0 14px;
-    font-size: 1.25rem;
-    color: var(--primary);
-    border-bottom: 1px solid rgba(0,102,255,0.18);
-    padding-bottom: 8px;
-  }
-
-  .routine-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px;
-  }
-
-  .routine-item {
-    display: flex;
-    align-items: center;
-    padding: 14px 16px;
-    background: rgba(0,0,0,0.025);
-    border-radius: 12px;
-    transition: var(--transition);
-    cursor: pointer;
-  }
-
-  .routine-item:hover {
-    background: rgba(0,102,255,0.07);
-    transform: translateX(5px);
-  }
-
-  .routine-item.completed {
-    background: rgba(0,200,83,0.14);
-  }
-
-  input[type="checkbox"] {
-    transform: scale(1.45);
-    margin-right: 14px;
-    accent-color: var(--success);
-  }
-
-  .emoji-big {
-    font-size: 1.9rem;
-    margin-right: 14px;
-    min-width: 38px;
-    text-align: center;
-  }
-
-  .note {
-    font-size: 0.82rem;
-    color: var(--muted);
-    margin-left: 10px;
-  }
-
-  .modal-buttons {
-    display: flex;
-    justify-content: flex-end;
-    gap: 16px;
-    margin-top: 28px;
-    padding-top: 20px;
-    border-top: 1px solid rgba(0,0,0,0.1);
-  }
-
-  button {
-    padding: 12px 28px;
-    border: none;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: var(--transition);
-  }
-
-  #save-btn {
-    background: var(--primary);
-    color: white;
-  }
-
-  #save-btn:hover {
-    background: #0055dd;
-    transform: translateY(-2px);
-  }
-
-  #close-btn {
-    background: #78909c;
-    color: white;
-  }
-
-  #close-btn:hover {
-    background: #607d8b;
-  }
-
-  @media (max-width: 640px) {
-    body { padding: 16px 12px; }
-    .routine-grid { grid-template-columns: 1fr; }
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Routine Tracker 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #007bff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        #summary {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 900px;
+        }
+        #summary h2 {
+            margin-top: 0;
+        }
+        .streak-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .streak-item {
+            background: #e9f7ff;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .streak-item h4 {
+            margin: 0 0 5px;
+            color: #007bff;
+        }
+        .streak-number {
+            font-size: 2em;
+            color: #28a745;
+        }
+        #progress-chart {
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        #calendar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+        .month {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .month h3 {
+            text-align: center;
+            margin: 0 0 10px;
+            color: #007bff;
+        }
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+        .day-header {
+            text-align: center;
+            font-weight: bold;
+            color: #666;
+        }
+        .day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.3s;
+            font-size: 1em;
+            position: relative;
+        }
+        .day:hover {
+            transform: scale(1.1);
+        }
+        .past { background: #f8f9fa; }
+        .today { border: 2px solid #007bff; }
+        .future { background: #e9ecef; cursor: not-allowed; }
+        .complete { background: #28a745; color: white; }
+        .partial { background: #ffc107; color: black; }
+        .missed { background: #dc3545; color: white; }
+        .completion-emoji {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 0.8em;
+        }
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #modal.show {
+            opacity: 1;
+        }
+        #modal-content {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transform: scale(0.9);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        #modal.show #modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+        #modal-content h2 {
+            margin-top: 0;
+        }
+        .routine-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .routine-item input {
+            margin-right: 10px;
+        }
+        .routine-item label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+        .routine-emoji {
+            margin-right: 8px;
+            font-size: 1.2em;
+        }
+        .routine-item.completed {
+            background: #d4edda;
+        }
+        .conditional-note {
+            font-size: 0.8em;
+            color: #666;
+            margin-left: 10px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #close-btn {
+            background: #6c757d;
+        }
+        #close-btn:hover {
+            background: #5a6268;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
 </head>
 <body>
-
-<h1>Routine Tracker 2026</h1>
-
-<div id="summary">
-  <h2>Current Streaks & Progress</h2>
-  <div class="stats-grid" id="streaks-container"></div>
-
-  <h3>This Week</h3>
-  <div class="stats-grid" id="weekly-container"></div>
-</div>
-
-<div id="calendar"></div>
-
-<!-- Modal -->
-<div id="modal" role="dialog" aria-modal="true">
-  <div id="modal-content">
-    <h2 class="modal-title" id="modal-title">Edit Day</h2>
-
-    <div id="routines-list"></div>
-
-    <div class="modal-buttons">
-      <button id="close-btn">Cancel</button>
-      <button id="save-btn">Save Changes</button>
+    <h1>Routine Tracker 2026</h1>
+    <div id="summary">
+        <h2>Yearly Summary</h2>
+        <div class="streak-container"></div>
+        <canvas id="progress-chart"></canvas>
     </div>
-  </div>
-</div>
-
-<script>
-// ─────────────────────────────────────────────────────────────
-// CONFIGURATION
-// ─────────────────────────────────────────────────────────────
-const YEAR = 2026;
-const STORAGE_KEY = `routines-${YEAR}`;
-
-const ROUTINES = {
-  daily: [
-    { name: "Lymphatic morning movement", emoji: "🏃‍♂️" },
-    { name: "Weight training",             emoji: "🏋️‍♂️" },
-    { name: "Nattokinase in the morning",  emoji: "💊" },
-    { name: "Magnesium in the evening",    emoji: "🌙" },
-    { name: "Breathwork/meditation",       emoji: "🧘‍♂️" },
-    { name: "Creatine",                    emoji: "🥤" },
-    { name: "Collagen",                    emoji: "🧴" },
-    { name: "Reading before bed",          emoji: "📖" }
-  ],
-  neurofeedback: {
-    name: "Neurofeedback",
-    emoji: "🧠",
-    weeklyGoal: 5
-  },
-  mwf: [
-    { name: "Test & HCG", emoji: "💉", note: "Mon/Wed/Fri only" }
-  ],
-  variable: [
-    { name: "Sauna", emoji: "🧖‍♂️" }
-  ]
-};
-
-let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-
-// ─────────────────────────────────────────────────────────────
-// DATE HELPERS
-// ─────────────────────────────────────────────────────────────
-function pad(n) { return String(n).padStart(2, '0'); }
-
-function formatDate(m, d) {
-  return `${YEAR}-${pad(m)}-${pad(d)}`;
-}
-
-function isPastOrToday(str) {
-  const [y,m,d] = str.split('-').map(Number);
-  return new Date(y, m-1, d) <= new Date(new Date().setHours(0,0,0,0));
-}
-
-function isToday(str) {
-  return str === new Date().toISOString().slice(0,10);
-}
-
-function getDayOfWeek(str) {
-  return new Date(str).getDay(); // 0=Sun ... 6=Sat
-}
-
-function getWeekNumber(str) {
-  const d = new Date(str);
-  d.setHours(0,0,0,0);
-  d.setDate(d.getDate() + 3 - (d.getDay() || 7));
-  const yearStart = new Date(d.getFullYear(), 0, 1);
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-
-// ─────────────────────────────────────────────────────────────
-// STREAK & WEEKLY LOGIC
-// ─────────────────────────────────────────────────────────────
-function calculateStreaks() {
-  const todayKey = new Date().toISOString().slice(0,10);
-  const names = [
-    ...ROUTINES.daily.map(r => r.name),
-    ROUTINES.neurofeedback.name,
-    ...ROUTINES.mwf.map(r => r.name),
-    ...ROUTINES.variable.map(r => r.name)
-  ];
-
-  const streaks = Object.fromEntries(names.map(n => [n, 0]));
-
-  let date = new Date();
-  date.setHours(0,0,0,0);
-
-  while (date.getFullYear() === YEAR) {
-    const key = date.toISOString().slice(0,10);
-    const entry = data[key] || {};
-
-    let allDoneToday = true;
-
-    names.forEach(name => {
-      if (entry[name]) {
-        streaks[name]++;
-      } else {
-        streaks[name] = 0;
-        allDoneToday = false;
-      }
-    });
-
-    if (!allDoneToday && Object.keys(entry).length === 0) break;
-
-    date.setDate(date.getDate() - 1);
-  }
-
-  return streaks;
-}
-
-function getThisWeekNeuroCount() {
-  const thisWeek = getWeekNumber(new Date().toISOString().slice(0,10));
-  let count = 0;
-  Object.keys(data).forEach(k => {
-    if (getWeekNumber(k) === thisWeek && data[k][ROUTINES.neurofeedback.name]) {
-      count++;
-    }
-  });
-  return count;
-}
-
-function renderSummary() {
-  const streaks = calculateStreaks();
-  const container = document.getElementById('streaks-container');
-  container.innerHTML = '';
-
-  Object.entries(streaks).forEach(([name, count]) => {
-    const card = document.createElement('div');
-    card.className = 'stat-card';
-    card.innerHTML = `
-      <h4 style="margin-bottom:6px;">${name}</h4>
-      <div class="stat-number">${count}</div>
-      <div style="font-size:0.9rem;color:var(--muted);">day streak</div>
-    `;
-    container.appendChild(card);
-  });
-
-  // Weekly neuro
-  const neuroCount = getThisWeekNeuroCount();
-  const weekly = document.getElementById('weekly-container');
-  weekly.innerHTML = `
-    <div class="stat-card">
-      <h4 style="margin-bottom:6px;">Neurofeedback</h4>
-      <div class="stat-number">${neuroCount} / ${ROUTINES.neurofeedback.weeklyGoal}</div>
-      <div style="font-size:0.9rem;color:var(--muted);">this week</div>
+    <div id="calendar"></div>
+    <div id="modal">
+        <div id="modal-content">
+            <h2 id="modal-title">Edit Routines for Date</h2>
+            <div id="routines-list"></div>
+            <button id="save-btn">Save</button>
+            <button id="close-btn">Close</button>
+        </div>
     </div>
-  `;
-}
 
-// ─────────────────────────────────────────────────────────────
-// CALENDAR RENDERING
-// ─────────────────────────────────────────────────────────────
-function renderCalendar() {
-  const container = document.getElementById('calendar');
-  container.innerHTML = '';
+    <script>
+        const year = 2026;
+        const storageKey = 'routineStats2026';
 
-  for (let m = 1; m <= 12; m++) {
-    const monthDiv = document.createElement('div');
-    monthDiv.className = 'month';
+        const routines = {
+            daily: [
+                { name: 'Lymphatic morning movement', emoji: '🏃‍♂️' },
+                { name: 'Weight training', emoji: '🏋️‍♂️' },
+                { name: 'Nattokinase in the morning', emoji: '💊' },
+                { name: 'Magnesium in the evening', emoji: '🌙' },
+                { name: 'Breathwork/meditation', emoji: '🧘‍♂️' },
+                { name: 'Creatine', emoji: '🥤' },
+                { name: 'Collagen', emoji: '🧴' },
+                { name: 'Reading before bed', emoji: '📖' }
+            ],
+            mwf: [
+                { name: 'Test & HCG', emoji: '💉', note: '(M/W/F only)' }
+            ],
+            weekly: [
+                { name: 'Neurofeedback', emoji: '🧠', goal: 5, note: '(5 days a week)' }
+            ],
+            variable: [
+                { name: 'Sauna', emoji: '🧖‍♂️' }
+            ]
+        };
 
-    const title = document.createElement('h3');
-    title.textContent = new Date(YEAR, m-1, 1).toLocaleString('default', { month: 'long' }) + ` ${YEAR}`;
-    monthDiv.appendChild(title);
+        let stats = JSON.parse(localStorage.getItem(storageKey)) || {};
+        let progressChart;
 
-    const weekdays = document.createElement('div');
-    weekdays.className = 'weekdays';
-    'Sun Mon Tue Wed Thu Fri Sat'.split(' ').forEach(d => {
-      const span = document.createElement('span');
-      span.textContent = d;
-      weekdays.appendChild(span);
-    });
-    monthDiv.appendChild(weekdays);
-
-    const grid = document.createElement('div');
-    grid.className = 'days-grid';
-
-    const firstDay = new Date(YEAR, m-1, 1).getDay();
-    for (let i = 0; i < firstDay; i++) {
-      grid.appendChild(document.createElement('div'));
-    }
-
-    const daysInMonth = new Date(YEAR, m, 0).getDate();
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateKey = formatDate(m, d);
-      const cell = document.createElement('div');
-      cell.className = 'day-cell';
-      cell.textContent = d;
-
-      if (isToday(dateKey)) cell.classList.add('today');
-
-      if (isPastOrToday(dateKey)) {
-        const entry = data[dateKey] || {};
-        const dow = getDayOfWeek(dateKey);
-
-        const total =
-          ROUTINES.daily.length +
-          1 + // neurofeedback
-          ([1,3,5].includes(dow) ? ROUTINES.mwf.length : 0) +
-          (entry['Sauna'] ? 1 : 0);
-
-        const completed = Object.keys(entry).length;
-
-        if (completed === total) {
-          cell.classList.add('complete');
-          cell.innerHTML += '<span class="day-emoji">✅</span>';
-        } else if (completed > 0) {
-          cell.classList.add('partial');
-          cell.innerHTML += '<span class="day-emoji">⏳</span>';
-        } else {
-          cell.classList.add('missed');
-          cell.innerHTML += '<span class="day-emoji">❌</span>';
+        function getDaysInMonth(month) {
+            return new Date(year, month, 0).getDate();
         }
 
-        cell.onclick = () => openModal(dateKey, entry);
-      }
+        function getFirstDayOfMonth(month) {
+            return new Date(year, month - 1, 1).getDay();
+        }
 
-      grid.appendChild(cell);
-    }
+        function formatDate(month, day) {
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
 
-    monthDiv.appendChild(grid);
-    container.appendChild(monthDiv);
-  }
+        function isPast(date) {
+            const today = new Date();
+            return new Date(date) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        }
 
-  renderSummary();
-}
+        function isToday(dateStr) {
+            const today = new Date();
+            return new Date(dateStr).toDateString() === today.toDateString();
+        }
 
-// ─────────────────────────────────────────────────────────────
-// MODAL
-// ─────────────────────────────────────────────────────────────
-function openModal(dateKey, entry = {}) {
-  document.getElementById('modal-title').textContent = `Edit routines — ${dateKey}`;
+        function getDayOfWeek(dateStr) {
+            return new Date(dateStr).getDay(); // 0=Sun,1=Mon,...
+        }
 
-  const container = document.getElementById('routines-list');
-  container.innerHTML = '';
+        function getWeekNumber(date) {
+            const d = new Date(date);
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7); // Adjust for week starting Sunday
+            const week1 = new Date(d.getFullYear(), 0, 4);
+            return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+        }
 
-  // Daily
-  addSection(container, 'Daily Routines', ROUTINES.daily, entry);
+        function calculateStreaks() {
+            const today = new Date();
+            const streaks = {};
+            const allRoutines = [...routines.daily, ...routines.mwf, ...routines.variable, ...routines.weekly].map(r => r.name);
 
-  // Neurofeedback
-  addSection(container, 'Weekly Goal (5×/week)', [ROUTINES.neurofeedback], entry);
+            allRoutines.forEach(name => {
+                streaks[name] = 0;
+            });
 
-  // M/W/F conditional
-  const dow = new Date(dateKey).getDay();
-  if ([1,3,5].includes(dow)) {
-    addSection(container, 'M/W/F Only', ROUTINES.mwf, entry);
-  }
+            let date = new Date(today);
+            while (date >= new Date(year, 0, 1)) {
+                const dateKey = date.toISOString().split('T')[0];
+                const entry = stats[dateKey] || {};
+                let allCompleted = true;
 
-  // Variable
-  addSection(container, 'Variable / Optional', ROUTINES.variable, entry);
+                allRoutines.forEach(name => {
+                    if (entry[name]) {
+                        streaks[name]++;
+                    } else {
+                        allCompleted = false;
+                    }
+                });
 
-  const modal = document.getElementById('modal');
-  modal.style.display = 'grid';
-  requestAnimationFrame(() => modal.classList.add('show'));
-  modal.dataset.date = dateKey;
-}
+                if (!allCompleted) break; // Stop if not all completed on this day
+                date.setDate(date.getDate() - 1);
+            }
 
-function addSection(parent, title, items, entryData) {
-  const section = document.createElement('div');
-  section.className = 'section';
-  section.innerHTML = `<h3>${title}</h3>`;
+            return streaks;
+        }
 
-  const grid = document.createElement('div');
-  grid.className = 'routine-grid';
+        function calculateWeeklyProgress() {
+            const progress = {};
+            routines.weekly.forEach(r => {
+                progress[r.name] = 0;
+            });
 
-  items.forEach(item => {
-    const checked = !!entryData[item.name];
-    const row = document.createElement('div');
-    row.className = `routine-item${checked ? ' completed' : ''}`;
-    row.innerHTML = `
-      <input type="checkbox" ${checked ? 'checked' : ''} data-name="${item.name}">
-      <span class="emoji-big">${item.emoji}</span>
-      <span class="routine-label">${item.name}</span>
-      ${item.note ? `<span class="note">(${item.note})</span>` : ''}
-    `;
+            const today = new Date();
+            const currentWeek = getWeekNumber(today);
+            routines.weekly.forEach(r => {
+                Object.entries(stats).forEach(([dateKey, entry]) => {
+                    if (getWeekNumber(dateKey) === currentWeek && entry[r.name]) {
+                        progress[r.name]++;
+                    }
+                });
+            });
 
-    row.onclick = e => {
-      if (e.target.tagName !== 'INPUT') {
-        row.querySelector('input').click();
-      }
-    };
+            return progress;
+        }
 
-    row.querySelector('input').onchange = function() {
-      row.classList.toggle('completed', this.checked);
-    };
+        function updateSummary() {
+            const streakContainer = document.querySelector('.streak-container');
+            streakContainer.innerHTML = '';
+            const streaks = calculateStreaks();
 
-    grid.appendChild(row);
-  });
+            Object.entries(streaks).forEach(([name, count]) => {
+                const item = document.createElement('div');
+                item.classList.add('streak-item');
+                item.innerHTML = `
+                    <h4>${name}</h4>
+                    <div class="streak-number">${count}</div>
+                    <p>Day Streak 🔥</p>
+                `;
+                streakContainer.appendChild(item);
+            });
 
-  section.appendChild(grid);
-  parent.appendChild(section);
-}
+            const weeklyContainer = document.querySelector('.weekly-container');
+            weeklyContainer.innerHTML = '';
+            const weeklyProgress = calculateWeeklyProgress();
 
-document.getElementById('save-btn').onclick = () => {
-  const date = document.getElementById('modal').dataset.date;
-  const newEntry = {};
+            routines.weekly.forEach(r => {
+                const count = weeklyProgress[r.name];
+                const item = document.createElement('div');
+                item.classList.add('weekly-item');
+                item.innerHTML = `
+                    <h4>${r.name}</h4>
+                    <div class="weekly-number">${count}/${r.goal}</div>
+                    <p>This Week</p>
+                `;
+                weeklyContainer.appendChild(item);
+            });
+        }
 
-  document.querySelectorAll('#routines-list input:checked').forEach(cb => {
-    newEntry[cb.dataset.name] = true;
-  });
+        function updateProgressChart() {
+            const dates = [];
+            const completions = [];
+            let date = new Date(year, 0, 1);
+            const today = new Date();
 
-  if (Object.keys(newEntry).length > 0) {
-    data[date] = newEntry;
-  } else {
-    delete data[date];
-  }
+            while (date <= today) {
+                const dateKey = date.toISOString().split('T')[0];
+                dates.push(dateKey);
+                const entry = stats[dateKey] || {};
+                const dow = getDayOfWeek(dateKey);
+                const totalDaily = routines.daily.length;
+                const totalMWF = [1,3,5].includes(dow) ? routines.mwf.length : 0;
+                const totalWeekly = routines.weekly.length; // Always include, but optional
+                const totalVariable = entry['Sauna'] ? 1 : 0;
+                const total = totalDaily + totalMWF + totalWeekly + totalVariable;
+                const completed = Object.values(entry).filter(v => v).length;
+                completions.push((completed / total) * 100 || 0);
+                date.setDate(date.getDate() + 1);
+            }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  closeModal();
-  renderCalendar();
-};
+            const data = {
+                labels: dates.map(d => new Date(d).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})),
+                datasets: [{
+                    label: 'Daily Completion %',
+                    data: completions,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0,123,255,0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            };
 
-document.getElementById('close-btn').onclick = closeModal;
+            if (progressChart) {
+                progressChart.data = data;
+                progressChart.update();
+            } else {
+                const ctx = document.getElementById('progress-chart').getContext('2d');
+                progressChart = new Chart(ctx, {
+                    type: 'line',
+                    data: data,
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { min: 0, max: 100, title: { display: true, text: '%' } }
+                        }
+                    }
+                });
+            }
+        }
 
-function closeModal() {
-  const modal = document.getElementById('modal');
-  modal.classList.remove('show');
-  setTimeout(() => { modal.style.display = 'none'; }, 620);
-}
+        function renderCalendar() {
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = '';
 
-// ─────────────────────────────────────────────────────────────
-// INITIALIZE
-// ─────────────────────────────────────────────────────────────
-renderCalendar();
-</script>
+            for (let month = 1; month <= 12; month++) {
+                const monthDiv = document.createElement('div');
+                monthDiv.classList.add('month');
+
+                const monthName = new Date(year, month - 1, 1).toLocaleString('default', { month: 'long' });
+                const h3 = document.createElement('h3');
+                h3.textContent = `${monthName} ${year}`;
+                monthDiv.appendChild(h3);
+
+                const daysGrid = document.createElement('div');
+                daysGrid.classList.add('days');
+
+                ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+                    const header = document.createElement('div');
+                    header.classList.add('day-header');
+                    header.textContent = day;
+                    daysGrid.appendChild(header);
+                });
+
+                const firstDay = getFirstDayOfMonth(month);
+                const daysInMonth = getDaysInMonth(month);
+
+                for (let i = 0; i < firstDay; i++) {
+                    const empty = document.createElement('div');
+                    daysGrid.appendChild(empty);
+                }
+
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dateKey = formatDate(month, day);
+                    const dayDiv = document.createElement('div');
+                    dayDiv.classList.add('day');
+                    dayDiv.textContent = day;
+
+                    if (isToday(dateKey)) {
+                        dayDiv.classList.add('today');
+                    }
+
+                    if (isPast(dateKey) || isToday(dateKey)) {
+                        dayDiv.classList.add('past');
+                        const entry = stats[dateKey] || {};
+                        const dow = getDayOfWeek(dateKey);
+                        const totalDaily = routines.daily.length;
+                        const totalMWF = [1,3,5].includes(dow) ? routines.mwf.length : 0;
+                        const totalWeekly = routines.weekly.length;
+                        const totalVariable = entry['Sauna'] ? 1 : 0;
+                        const total = totalDaily + totalMWF + totalWeekly + totalVariable;
+                        const completed = Object.values(entry).filter(v => v).length;
+
+                        if (completed === total) {
+                            dayDiv.classList.add('complete');
+                            dayDiv.title = 'All routines completed!';
+                            const emoji = document.createElement('span');
+                            emoji.classList.add('completion-emoji');
+                            emoji.textContent = '✅';
+                            dayDiv.appendChild(emoji);
+                        } else if (completed > 0) {
+                            dayDiv.classList.add('partial');
+                            dayDiv.title = `${completed}/${total} routines completed`;
+                            const emoji = document.createElement('span');
+                            emoji.classList.add('completion-emoji');
+                            emoji.textContent = '⏳';
+                            dayDiv.appendChild(emoji);
+                        } else {
+                            dayDiv.classList.add('missed');
+                            dayDiv.title = 'No routines completed';
+                            const emoji = document.createElement('span');
+                            emoji.classList.add('completion-emoji');
+                            emoji.textContent = '❌';
+                            dayDiv.appendChild(emoji);
+                        }
+                        dayDiv.onclick = () => openModal(dateKey, entry);
+                    } else {
+                        dayDiv.classList.add('future');
+                    }
+
+                    daysGrid.appendChild(dayDiv);
+                }
+
+                monthDiv.appendChild(daysGrid);
+                calendar.appendChild(monthDiv);
+            }
+
+            updateSummary();
+            updateProgressChart();
+        }
+
+        function openModal(date, entry = {}) {
+            document.getElementById('modal-title').textContent = `Edit Routines for ${date}`;
+            const list = document.getElementById('routines-list');
+            list.innerHTML = '';
+
+            // Daily routines
+            routines.daily.forEach(r => {
+                const item = createRoutineItem(r.name, r.emoji, entry[r.name] || false);
+                list.appendChild(item);
+            });
+
+            // M/W/F
+            const dow = getDayOfWeek(date);
+            if ([1,3,5].includes(dow)) {
+                routines.mwf.forEach(r => {
+                    const item = createRoutineItem(r.name, r.emoji, entry[r.name] || false, r.note);
+                    list.appendChild(item);
+                });
+            }
+
+            // Weekly
+            routines.weekly.forEach(r => {
+                const item = createRoutineItem(r.name, r.emoji, entry[r.name] || false, r.note);
+                list.appendChild(item);
+            });
+
+            // Variable
+            routines.variable.forEach(r => {
+                const item = createRoutineItem(r.name, r.emoji, entry[r.name] || false);
+                list.appendChild(item);
+            });
+
+            const modal = document.getElementById('modal');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+            modal.dataset.date = date;
+        }
+
+        function createRoutineItem(name, emoji, checked, note = '') {
+            const div = document.createElement('div');
+            div.classList.add('routine-item');
+            if (checked) div.classList.add('completed');
+
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.checked = checked;
+            input.onchange = () => {
+                if (input.checked) {
+                    div.classList.add('completed');
+                } else {
+                    div.classList.remove('completed');
+                }
+            };
+
+            const label = document.createElement('label');
+            label.innerHTML = `<span class="routine-emoji">${emoji}</span> ${name}`;
+            if (note) {
+                const noteSpan = document.createElement('span');
+                noteSpan.classList.add('conditional-note');
+                noteSpan.textContent = note;
+                label.appendChild(noteSpan);
+            }
+
+            div.appendChild(input);
+            div.appendChild(label);
+            return div;
+        }
+
+        document.getElementById('save-btn').onclick = () => {
+            const date = document.getElementById('modal').dataset.date;
+            const entry = {};
+            const items = document.querySelectorAll('.routine-item');
+            items.forEach(item => {
+                const label = item.querySelector('label').textContent.split(' (')[0].trim().split(' ').slice(1).join(' ');
+                const checkbox = item.querySelector('input');
+                if (checkbox.checked) {
+                    entry[label] = true;
+                }
+            });
+            stats[date] = entry;
+            if (Object.keys(entry).length === 0) delete stats[date];
+            localStorage.setItem(storageKey, JSON.stringify(stats));
+            closeModal();
+            renderCalendar();
+        };
+
+        document.getElementById('close-btn').onclick = closeModal;
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+
+        // Initial render
+        renderCalendar();
+    </script>
 </body>
 </html>
