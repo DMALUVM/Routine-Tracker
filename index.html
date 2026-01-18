@@ -361,6 +361,22 @@
                 `;
                 streakContainer.appendChild(item);
             });
+
+            const weeklyContainer = document.querySelector('.weekly-container');
+            weeklyContainer.innerHTML = '';
+            const weeklyProgress = calculateWeeklyProgress();
+
+            routines.weekly.forEach(r => {
+                const count = weeklyProgress[r.name];
+                const item = document.createElement('div');
+                item.classList.add('weekly-item');
+                item.innerHTML = `
+                    <h4>${r.name}</h4>
+                    <div class="weekly-number">${count}/${r.goal}</div>
+                    <p>This Week</p>
+                `;
+                weeklyContainer.appendChild(item);
+            });
         }
 
         function updateProgressChart() {
@@ -503,105 +519,6 @@
 
             updateSummary();
             updateProgressChart();
-        }
-
-        function openModal(date, entry = {}) {
-            document.getElementById('modal-title').textContent = `Edit Routines for ${date}`;
-            const list = document.getElementById('routines-list');
-            list.innerHTML = '';
-
-            // Daily routines
-            routines.daily.forEach(r => {
-                const item = createRoutineItem(r.name, r.emoji, entry[r.name] || false);
-                list.appendChild(item);
-            });
-
-            // M/W/F
-            const dow = getDayOfWeek(date);
-            if ([1,3,5].includes(dow)) {
-                routines.mwf.forEach(r => {
-                    const item = createRoutineItem(r.name, r.emoji, entry[r.name] || false, r.note);
-                    list.appendChild(item);
-                });
-            }
-
-            // Weekly
-            routines.weekly.forEach(r => {
-                const item = createRoutineItem(r.name, r.emoji, entry[r.name] || false, r.note);
-                list.appendChild(item);
-            });
-
-            // Variable
-            routines.variable.forEach(r => {
-                const item = createRoutineItem(r.name, r.emoji, entry[r.name] || false);
-                list.appendChild(item);
-            });
-
-            const modal = document.getElementById('modal');
-            modal.style.display = 'flex';
-            setTimeout(() => {
-                modal.classList.add('show');
-            }, 10);
-            modal.dataset.date = date;
-        }
-
-        function createRoutineItem(name, emoji, checked, note = '') {
-            const div = document.createElement('div');
-            div.classList.add('routine-item');
-            if (checked) div.classList.add('completed');
-
-            const input = document.createElement('input');
-            input.type = 'checkbox';
-            input.checked = checked;
-            input.onchange = () => {
-                if (input.checked) {
-                    div.classList.add('completed');
-                } else {
-                    div.classList.remove('completed');
-                }
-            };
-
-            const label = document.createElement('label');
-            label.innerHTML = `<span class="routine-emoji">${emoji}</span> ${name}`;
-            if (note) {
-                const noteSpan = document.createElement('span');
-                noteSpan.classList.add('conditional-note');
-                noteSpan.textContent = note;
-                label.appendChild(noteSpan);
-            }
-
-            div.appendChild(input);
-            div.appendChild(label);
-            return div;
-        }
-
-        document.getElementById('save-btn').onclick = () => {
-            const date = document.getElementById('modal').dataset.date;
-            const entry = {};
-            const items = document.querySelectorAll('.routine-item');
-            items.forEach(item => {
-                const labelText = item.querySelector('label').textContent;
-                const name = labelText.split(' (')[0].trim().split(' ').slice(1).join(' ');
-                const checkbox = item.querySelector('input');
-                if (checkbox.checked) {
-                    entry[name] = true;
-                }
-            });
-            stats[date] = entry;
-            if (Object.keys(entry).length === 0) delete stats[date];
-            localStorage.setItem(storageKey, JSON.stringify(stats));
-            closeModal();
-            renderCalendar();
-        };
-
-        document.getElementById('close-btn').onclick = closeModal;
-
-        function closeModal() {
-            const modal = document.getElementById('modal');
-            modal.classList.remove('show');
-            setTimeout(() => {
-                modal.style.display = 'none';
-            }, 300);
         }
 
         // Initial render
