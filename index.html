@@ -263,30 +263,42 @@
             return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         }
 
+        function getTodayInEST() {
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/New_York',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            const parts = formatter.formatToParts(new Date());
+            const map = new Map(parts.map(p => [p.type, p.value]));
+            return `${map.get('year')}-${map.get('month')}-${map.get('day')}`;
+        }
+
         function isPast(date) {
-            const today = new Date();
-            return new Date(date) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const today = getTodayInEST();
+            return date < today;
         }
 
         function isToday(dateStr) {
-            const today = new Date();
-            return new Date(dateStr).toDateString() === today.toDateString();
+            const today = getTodayInEST();
+            return dateStr === today;
         }
 
         function getDayOfWeek(dateStr) {
             return new Date(dateStr).getDay(); // 0=Sun,1=Mon,...
         }
 
-        function getWeekNumber(date) {
-            const d = new Date(date);
+        function getWeekNumber(dateStr) {
+            const d = new Date(dateStr);
             d.setHours(0, 0, 0, 0);
-            d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7); // Adjust for week starting Sunday
-            const week1 = new Date(d.getFullYear(), 0, 4);
-            return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+            d.setDate(d.getDate() + 4 - (d.getDay() || 7)); // Adjust for Monday start
+            const yearStart = new Date(d.getFullYear(), 0, 1);
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
         }
 
         function calculateStreaks() {
-            const today = new Date();
+            const today = new Date(getTodayInEST());
             const streaks = {};
             const allRoutines = [...routines.daily, ...routines.mwf, ...routines.variable, ...routines.weekly].map(r => r.name);
 
@@ -321,8 +333,8 @@
                 progress[r.name] = 0;
             });
 
-            const today = new Date();
-            const currentWeek = getWeekNumber(today);
+            const today = new Date(getTodayInEST());
+            const currentWeek = getWeekNumber(today.toISOString().split('T')[0]);
             routines.weekly.forEach(r => {
                 Object.entries(stats).forEach(([dateKey, entry]) => {
                     if (getWeekNumber(dateKey) === currentWeek && entry[r.name]) {
@@ -349,29 +361,13 @@
                 `;
                 streakContainer.appendChild(item);
             });
-
-            const weeklyContainer = document.querySelector('.weekly-container');
-            weeklyContainer.innerHTML = '';
-            const weeklyProgress = calculateWeeklyProgress();
-
-            routines.weekly.forEach(r => {
-                const count = weeklyProgress[r.name];
-                const item = document.createElement('div');
-                item.classList.add('weekly-item');
-                item.innerHTML = `
-                    <h4>${r.name}</h4>
-                    <div class="weekly-number">${count}/${r.goal}</div>
-                    <p>This Week</p>
-                `;
-                weeklyContainer.appendChild(item);
-            });
         }
 
         function updateProgressChart() {
             const dates = [];
             const completions = [];
             let date = new Date(year, 0, 1);
-            const today = new Date();
+            const today = new Date(getTodayInEST());
 
             while (date <= today) {
                 const dateKey = date.toISOString().split('T')[0];
@@ -506,104 +502,6 @@
 
             updateSummary();
             updateProgressChart();
-        }
-
-        function openModal(date, entry = {}) {
-            document.getElementById('modal-title').textContent = `Edit Routines for ${date}`;
-            const list = document.getElementById('routines-list');
-            list.innerHTML = '';
-
-            // Daily routines
-            routines.daily.forEach(r => {
-                const item = createRoutineItem(r.name, r.emoji, entry[r.name] || false);
-                list.appendChild(item);
-            });
-
-            // M/W/F
-            const dow = getDayOfWeek(date);
-            if ([1,3,5].includes(dow)) {
-                routines.mwf.forEach(r => {
-                    const item = createRoutineItem(r.name, r.emoji, entry[r.name] || false, r.note);
-                    list.appendChild(item);
-                });
-            }
-
-            // Weekly
-            routines.weekly.forEach(r => {
-                const item = createRoutineItem(r.name, r.emoji, entry[r.name] || false, r.note);
-                list.appendChild(item);
-            });
-
-            // Variable
-            routines.variable.forEach(r => {
-                const item = createRoutineItem(r.name, r.emoji, entry[r.name] || false);
-                list.appendChild(item);
-            });
-
-            const modal = document.getElementById('modal');
-            modal.style.display = 'flex';
-            setTimeout(() => {
-                modal.classList.add('show');
-            }, 10);
-            modal.dataset.date = date;
-        }
-
-        function createRoutineItem(name, emoji, checked, note = '') {
-            const div = document.createElement('div');
-            div.classList.add('routine-item');
-            if (checked) div.classList.add('completed');
-
-            const input = document.createElement('input');
-            input.type = 'checkbox';
-            input.checked = checked;
-            input.onchange = () => {
-                if (input.checked) {
-                    div.classList.add('completed');
-                } else {
-                    div.classList.remove('completed');
-                }
-            };
-
-            const label = document.createElement('label');
-            label.innerHTML = `<span class="routine-emoji">${emoji}</span> ${name}`;
-            if (note) {
-                const noteSpan = document.createElement('span');
-                noteSpan.classList.add('conditional-note');
-                noteSpan.textContent = note;
-                label.appendChild(noteSpan);
-            }
-
-            div.appendChild(input);
-            div.appendChild(label);
-            return div;
-        }
-
-        document.getElementById('save-btn').onclick = () => {
-            const date = document.getElementById('modal').dataset.date;
-            const entry = {};
-            const items = document.querySelectorAll('.routine-item');
-            items.forEach(item => {
-                const label = item.querySelector('label').textContent.split(' (')[0].trim().split(' ').slice(1).join(' ');
-                const checkbox = item.querySelector('input');
-                if (checkbox.checked) {
-                    entry[label] = true;
-                }
-            });
-            stats[date] = entry;
-            if (Object.keys(entry).length === 0) delete stats[date];
-            localStorage.setItem(storageKey, JSON.stringify(stats));
-            closeModal();
-            renderCalendar();
-        };
-
-        document.getElementById('close-btn').onclick = closeModal;
-
-        function closeModal() {
-            const modal = document.getElementById('modal');
-            modal.classList.remove('show');
-            setTimeout(() => {
-                modal.style.display = 'none';
-            }, 300);
         }
 
         // Initial render
